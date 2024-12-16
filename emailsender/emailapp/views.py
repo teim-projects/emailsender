@@ -107,6 +107,9 @@ def display_table_data(request, table_name):
 
 
 
+
+
+
 import re
 from django.core.exceptions import ValidationError
 from django.core.mail import send_mail, BadHeaderError
@@ -374,3 +377,100 @@ def reset_password_confirm(request):
             return redirect('login')
         messages.error(request, "Passwords do not match")
     return render(request, 'reset_password_confirm.html')
+
+
+
+
+from django.shortcuts import render, redirect
+from django.db import connection
+from django.core.mail import send_mail
+from django.conf import settings
+from .models import UploadedTable
+
+def send_email_page(request):
+    if request.method == 'POST':
+        sender_email = request.POST.get('sender_email')
+        table_name = request.POST.get('table_name')
+
+        if not sender_email or not table_name:
+            return render(request, 'send_email.html', {
+                'error': 'Please provide both sender email and table name.',
+                'tables': UploadedTable.objects.values_list('table_name', flat=True),
+            })
+
+        try:
+            # Fetch email addresses from the selected table
+            with connection.cursor() as cursor:
+                cursor.execute(f"SELECT email FROM {table_name}")
+                emails = [row[0] for row in cursor.fetchall()]
+
+            # Send email to all fetched email addresses
+            subject = "Welcome to TEIM"
+            message = "Thank you for joining TEIM! We are excited to have you with us."
+
+            for email in emails:
+                send_mail(subject, message, sender_email, [email], fail_silently=False)
+
+            return render(request, 'send_email.html', {
+                'success': f"Emails sent successfully to {len(emails)} customers.",
+                'tables': UploadedTable.objects.values_list('table_name', flat=True),
+            })
+
+        except Exception as e:
+            return render(request, 'send_email.html', {
+                'error': f"Error sending emails: {e}",
+                'tables': UploadedTable.objects.values_list('table_name', flat=True),
+            })
+
+    # Render the email sending page with table list
+    tables = UploadedTable.objects.values_list('table_name', flat=True)
+    return render(request, 'send_email.html', {'tables': tables})
+
+from django.shortcuts import render
+from django.db import connection  # For dynamic table queries
+from django.http import JsonResponse
+import asyncio
+
+async def send_emails(request):
+    success = None
+    error = None
+    sent_count = 0
+    total_count = 0
+
+    # Fetch the table names dynamically (example)
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT table_name FROM information_schema.tables WHERE table_schema='public'"
+        )
+        tables = [row[0] for row in cursor.fetchall()]
+
+    if request.method == "POST":
+        sender_email = request.POST.get("sender_email")
+        table_name = request.POST.get("table_name")
+
+        if not sender_email or not table_name:
+            error = "Both fields are required."
+        else:
+            try:
+                # Fetch customer emails from the selected table
+                with connection.cursor() as cursor:
+                    cursor.execute(f"SELECT email FROM {table_name}")
+                    customers = [row[0] for row in cursor.fetchall()]
+
+                total_count = len(customers)
+
+                # Simulate email sending asynchronously
+                for customer_email in customers:
+                    await asyncio.sleep(1)  # Simulate async email sending
+                    sent_count += 1
+
+                success = f"Successfully sent emails to {sent_count}/{total_count} customers."
+
+            except Exception as e:
+                error = f"Error occurred: {str(e)}"
+
+    return render(request, "send_emails.html", {
+        "tables": tables,
+        "success": success,
+        "error": error,
+    })

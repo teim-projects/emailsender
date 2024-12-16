@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Send Emails</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f9f9f9;
+        }
+        .container {
+            width: 50%;
+            margin: 50px auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            margin-top: 15px;
+            font-weight: bold;
+        }
+        input, select, button {
+            margin-top: 8px;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #28a745;
+            color: #fff;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        .message {
+            margin-top: 15px;
+            font-size: 16px;
+            color: green;
+        }
+        .error {
+            color: red;
+        }
+    </style>
+
+    
+</head>
+<body>
+    <div class="container">
+        <h1>Send Emails to Customers</h1>
+        <form method="POST">
+            {% csrf_token %}
+            <label for="sender_email">Sender Email:</label>
+            <input type="email" id="sender_email" name="sender_email" required>
+
+            <label for="table_name">Select Table:</label>
+            <select id="table_name" name="table_name" required>
+                <option value="">-- Select Table --</option>
+                {% for table in tables %}
+                <option value="{{ table }}">{{ table }}</option>
+                {% endfor %}
+            </select>
+
+            <button type="submit">Send Emails</button>
+        </form>
+
+        {% if success %}
+        <p class="message">{{ success }}</p>
+        {% endif %}
+        {% if error %}
+        <p class="error">{{ error }}</p>
+        {% endif %}
+    </div>
+</body>
+</html>
